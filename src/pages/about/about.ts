@@ -1,10 +1,8 @@
 import { Component } from '@angular/core';
-import { NavController, PopoverController } from 'ionic-angular';
+import { NavController, PopoverController, AlertController } from 'ionic-angular';
 import { GoogleMaps, GoogleMap, GoogleMapsEvent, LatLng, CameraPosition, MarkerOptions } from '@ionic-native/google-maps';
 import { Geolocation } from '@ionic-native/geolocation';
-import { AndroidPermissions } from '@ionic-native/android-permissions';
 import { HTTP } from '@ionic-native/http';
-import { MapSettingPopOver } from './map-settings-pop-over';
 
 @Component({
 	selector: 'page-about',
@@ -12,18 +10,16 @@ import { MapSettingPopOver } from './map-settings-pop-over';
 	providers: [
 	GoogleMaps,
 	Geolocation,
-	AndroidPermissions,
 	HTTP
-	], 
-	entryComponents:[ MapSettingPopOver ]
+	]
 })
 export class AboutPage {
 
 	constructor(public navCtrl: NavController, 
 		public popoverCtrl: PopoverController,
+		public alertCtrl: AlertController,
 		private googleMaps: GoogleMaps, 
 		private geolocation: Geolocation, 
-		private androidPermissions: AndroidPermissions,
 		private http: HTTP) {
 	}
 
@@ -31,13 +27,22 @@ export class AboutPage {
 		this.loadMap();
 	}
 
+	showAlert(title, subtitle, buttons){
+		let alert = this.alertCtrl.create({
+			title: title,
+			subTitle: subtitle,
+			buttons: buttons
+		});
+		alert.present();
+	}
+
 	loadMap() {
 		let element: HTMLElement = document.getElementById('map');
 
 		let map: GoogleMap = this.googleMaps.create(element);
-
 		map.one(GoogleMapsEvent.MAP_READY).then(
 			() => {
+				map.setMapTypeId('plugin.google.maps.MapTypeId.ROADMAP');
 				this.geolocation.getCurrentPosition().then((resp) => {
 					let ionic: LatLng = new LatLng(resp.coords.latitude,resp.coords.longitude);
 
@@ -58,6 +63,7 @@ export class AboutPage {
 					map.addMarker(markerOptions);
 
 				}).catch((error) => {
+					this.showAlert('Erro', 'Não foi possível obter a sua localização', ['OK']);
 					alert('Error getting location');
 				});
 
@@ -65,16 +71,11 @@ export class AboutPage {
 			});
 	}
 
-	presentPopover(clickEvent) {
-		let popover = this.popoverCtrl.create(MapSettingPopOver);
-		popover.present({ev: clickEvent});
-	}
-
 	getPlaces(){
 		this.geolocation.getCurrentPosition().then((resp) => {
 			let position = resp.coords.latitude + ',' + resp.coords.longitude;
 			let key = 'AIzaSyDl2Oda9y9VVei2LNNaR2mIeUayV1HyeLQ';
-			let url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location='+position+'&radius=500&type=restaurant&key='+key;
+			let url = 'https://maps.googleapis.com/maps/api/place/nearbysearch/json?location='+position+'&radius=500&type=restaurant&keyword=pizza&key='+key;
 			alert(url);
 			this.http.get(url, {}, {})
 			.then(data => {
